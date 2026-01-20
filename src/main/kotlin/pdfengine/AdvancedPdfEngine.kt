@@ -133,6 +133,8 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
      * @param cellHeight Height of each cell (in points)
      * @param borderColor RGB color for table borders (default: black)
      * @param headerBackgroundColor RGB color for header background (default: light gray)
+     * @param headerFontColor RGB color for header text (default: white)
+     * @param rowFontColor RGB color for row text (default: black)
      * @param alternateRowColor Optional RGB color for alternating row backgrounds
      * @throws IllegalStateException If font has not been set
      */
@@ -143,6 +145,8 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
         cellHeight: Float = 30f,
         borderColor: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
         headerBackgroundColor: Triple<Float, Float, Float> = Triple(0.8f, 0.8f, 0.8f),
+        headerFontColor: Triple<Float, Float, Float> = Triple(1f, 1f, 1f),
+        rowFontColor: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
         alternateRowColor: Triple<Float, Float, Float>? = null,
         borderWidth: Float = 1f
     ) {
@@ -152,12 +156,10 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
 
         var tableStartY = currentY
 
-        val cs = contentStream ?: return
-
         // Draw header row
         drawTableRow(
-            cs, headers, marginLeft, tableStartY, calculatedCellWidth, cellHeight,
-            borderColor, headerBackgroundColor, borderWidth, fontPair
+            headers, marginLeft, tableStartY, calculatedCellWidth, cellHeight,
+            borderColor, headerBackgroundColor, borderWidth, fontPair, headerFontColor
         )
 
         tableStartY -= cellHeight
@@ -178,8 +180,8 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
             }
 
             drawTableRow(
-                cs, row, marginLeft, tableStartY, calculatedCellWidth, cellHeight,
-                borderColor, rowBackgroundColor, borderWidth, fontPair
+                row, marginLeft, tableStartY, calculatedCellWidth, cellHeight,
+                borderColor, rowBackgroundColor, borderWidth, fontPair, rowFontColor
             )
 
             tableStartY -= cellHeight
@@ -190,7 +192,6 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
     /**
      * Helper function to draw a single row of the table
      *
-     * @param cs The content stream to draw on
      * @param cells List of cell values for this row
      * @param startX Starting x-coordinate for the row
      * @param startY Starting y-coordinate for the row
@@ -200,9 +201,9 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
      * @param backgroundColor Optional RGB color for cell background
      * @param borderWidth Width of the border line
      * @param fontPair The font pair to use for rendering text
+     * @param fontColor RGB color for the text
      */
     private fun drawTableRow(
-        cs: PDPageContentStream,
         cells: List<String>,
         startX: Float,
         startY: Float,
@@ -211,11 +212,15 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
         borderColor: Triple<Float, Float, Float>,
         backgroundColor: Triple<Float, Float, Float>?,
         borderWidth: Float,
-        fontPair: FontPair
+        fontPair: FontPair,
+        fontColor: Triple<Float, Float, Float> = Triple(0f, 0f, 0f)
     ) {
         cells.forEachIndexed { index, cellText ->
             val cellX = startX + (index * cellWidth)
             val cellY = startY - cellHeight
+
+            // Always get fresh contentStream (may be new after page break)
+            val cs = contentStream ?: return
 
             // Draw background if specified
             if (backgroundColor != null) {
@@ -230,7 +235,8 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
             cs.addRect(cellX, cellY, cellWidth, cellHeight)
             cs.stroke()
 
-            // Draw text
+            // Set font color and draw text
+            cs.setNonStrokingColor(fontColor.first, fontColor.second, fontColor.third)
             val textX = cellX + 5f // 5 points padding
             val textY = startY - (cellHeight / 2) - (defaultFontSize / 4) // Vertically center
             renderText(cellText, textX, textY, fontPair, defaultFontSize)
@@ -299,7 +305,7 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
      * Postcondition:
      * - A new page is added to the document, and its content stream is prepared for rendering operations.
      */
-    private fun addNewPage() {
+    fun addNewPage() {
         contentStream?.close()
 
         val page = PDPage(mediaBox)
@@ -420,7 +426,6 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
         cs.beginText()
         cs.setFont(pdFont, fontSize)
         cs.setTextMatrix(Matrix.getTranslateInstance(x, y))
-        cs.newLineAtOffset(0f, fontSize)
         cs.showText(text)
         cs.endText()
     }
