@@ -34,6 +34,16 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
     private var defaultFontPair: FontPair? = null
     private var defaultFontSize = 14f
 
+    // Line spacing configuration
+    private var defaultLineSpacingFactor = 1.5f // Default: 150% of font size
+
+    // Table configuration
+    private var defaultTableLineSpacingFactor = 1.2f // For wrapped text in table cells
+    private var defaultTableCellPaddingHorizontal = 5f
+    private var defaultTableCellPaddingVertical = 5f
+    private var defaultTableCellAlignment = CellAlignment(HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE)
+    private var defaultTableHeaderAlignment = CellAlignment(HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE)
+
     init {
         addNewPage()
     }
@@ -83,7 +93,8 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
      *
      * @param text The text to be written.
      * @param x The x-coordinate where the text starts. Defaults to the left margin.
-     * @param lineHeightFactor The factor to calculate the spacing between lines relative to the default font size. Defaults to 1.5.
+     * @param lineHeightFactor The factor to calculate the spacing between lines relative to the default font size.
+     *                        If null, uses the default line spacing factor.
      * @param wrapText Whether to wrap the text if it exceeds the specified maximum width. Defaults to false.
      * @param maxWidth The maximum width allowed for the text before wrapping occurs. Defaults to the calculated maximum width of the page.
      * @throws IllegalStateException If a font has not been set prior to invoking this method.
@@ -91,13 +102,14 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
     fun writeLine(
         text: String,
         x: Float = marginLeft,
-        lineHeightFactor: Float = 1.5f,
+        lineHeightFactor: Float? = null,
         wrapText: Boolean = false,
         maxWidth: Float = getAvailableWidth()
     ) {
         val fontPair = this.getFontPair()
         val pdFont = fontPair.pdFont
-        val lineHeight = defaultFontSize * lineHeightFactor
+        val actualLineHeightFactor = lineHeightFactor ?: defaultLineSpacingFactor
+        val lineHeight = defaultFontSize * actualLineHeightFactor
 
         val lines = if (wrapText) wrapText(text, pdFont, defaultFontSize, maxWidth) else listOf(text)
 
@@ -111,8 +123,9 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
 
     }
 
-    fun newLine(lineHeightFactor: Float = 1.5f) {
-        val lineHeight = defaultFontSize * lineHeightFactor
+    fun newLine(lineHeightFactor: Float? = null) {
+        val actualLineHeightFactor = lineHeightFactor ?: defaultLineSpacingFactor
+        val lineHeight = defaultFontSize * actualLineHeightFactor
         currentY -= lineHeight
     }
 
@@ -125,17 +138,103 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
     }
 
     /**
+     * Sets the default line spacing factor for regular text (writeLine, etc).
+     * The actual line height is calculated as: fontSize * lineSpacingFactor
+     *
+     * @param factor The multiplier for line spacing (e.g., 1.5 means 150% of font size)
+     */
+    fun setLineSpacingFactor(factor: Float) {
+        this.defaultLineSpacingFactor = factor
+    }
+
+    /**
+     * Gets the default line spacing factor for regular text.
+     *
+     * @return The current line spacing factor
+     */
+    fun getLineSpacingFactor(): Float = defaultLineSpacingFactor
+
+    /**
+     * Gets the line spacing factor for table cells.
+     *
+     * @return The current table line spacing factor
+     */
+    fun getTableLineSpacingFactor(): Float = defaultTableLineSpacingFactor
+
+    /**
+     * Sets the horizontal and vertical padding for table cells.
+     *
+     * @param horizontal Horizontal padding in points (left and right)
+     * @param vertical Vertical padding in points (top and bottom)
+     */
+    fun setTableCellPadding(horizontal: Float, vertical: Float) {
+        this.defaultTableCellPaddingHorizontal = horizontal
+        this.defaultTableCellPaddingVertical = vertical
+    }
+
+    /**
+     * Gets the horizontal padding for table cells.
+     *
+     * @return Horizontal padding value in points
+     */
+    fun getTableCellPaddingHorizontal(): Float = defaultTableCellPaddingHorizontal
+
+    /**
+     * Gets the vertical padding for table cells.
+     *
+     * @return Vertical padding value in points
+     */
+    fun getTableCellPaddingVertical(): Float = defaultTableCellPaddingVertical
+
+    /**
+     * Sets the default alignment for regular table cells.
+     *
+     * @param alignment The alignment to use (LEFT, CENTER, or RIGHT)
+     */
+    fun setTableCellAlignment(alignment: CellAlignment) {
+        this.defaultTableCellAlignment = alignment
+    }
+
+    /**
+     * Gets the default alignment for regular table cells.
+     *
+     * @return The current cell alignment
+     */
+    fun getTableCellAlignment(): CellAlignment = defaultTableCellAlignment
+
+    /**
+     * Sets the default alignment for table header cells.
+     *
+     * @param alignment The alignment to use (LEFT, CENTER, or RIGHT)
+     */
+    fun setTableHeaderAlignment(alignment: CellAlignment) {
+        this.defaultTableHeaderAlignment = alignment
+    }
+
+    /**
+     * Gets the default alignment for table header cells.
+     *
+     * @return The current header alignment
+     */
+    fun getTableHeaderAlignment(): CellAlignment = defaultTableHeaderAlignment
+
+    /**
      * Draws a table on the PDF with the specified structure, data, and formatting options.
      *
      * @param headers List of header cell values for the table columns
      * @param rows List of rows, where each row is a list of cell values
      * @param cellWidth Width of each cell. If not specified, calculates equally based on available width
-     * @param cellHeight Height of each cell (in points)
+     * @param cellHeight Height of each cell (in points). Can be overridden by autoHeight
+     * @param autoHeight If true, cell height is calculated based on wrapped text content
      * @param borderColor RGB color for table borders (default: black)
      * @param headerBackgroundColor RGB color for header background (default: light gray)
      * @param headerFontColor RGB color for header text (default: white)
      * @param rowFontColor RGB color for row text (default: black)
      * @param alternateRowColor Optional RGB color for alternating row backgrounds
+     * @param borderWidth Width of border lines
+     * @param lineSpacingFactor Line spacing multiplier for wrapped text (uses table line spacing if null)
+     * @param headerAlignment Text alignment for header cells (default: CENTER)
+     * @param cellAlignment Text alignment for data cells (default: LEFT)
      * @throws IllegalStateException If font has not been set
      */
     fun drawTable(
@@ -143,32 +242,54 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
         rows: List<List<String>>,
         cellWidth: Float? = null,
         cellHeight: Float = 30f,
+        autoHeight: Boolean = true,
         borderColor: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
         headerBackgroundColor: Triple<Float, Float, Float> = Triple(0.8f, 0.8f, 0.8f),
         headerFontColor: Triple<Float, Float, Float> = Triple(1f, 1f, 1f),
         rowFontColor: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
         alternateRowColor: Triple<Float, Float, Float>? = null,
-        borderWidth: Float = 1f
+        borderWidth: Float = 1f,
+        lineSpacingFactor: Float? = null,
+        headerAlignment: CellAlignment? = null,
+        cellAlignment: CellAlignment? = null
     ) {
         val fontPair = this.getFontPair()
         val numColumns = headers.size
         val calculatedCellWidth = cellWidth ?: (getAvailableWidth() / numColumns)
+        val actualLineSpacingFactor = lineSpacingFactor ?: defaultTableLineSpacingFactor
+        val actualHeaderAlignment = headerAlignment ?: defaultTableHeaderAlignment
+        val actualCellAlignment = cellAlignment ?: defaultTableCellAlignment
 
         var tableStartY = currentY
 
+        // Calculate header height
+        val headerHeight = if (autoHeight) {
+            calculateRowHeight(headers, calculatedCellWidth, fontPair, actualLineSpacingFactor)
+        } else {
+            cellHeight
+        }
+
         // Draw header row
         drawTableRow(
-            headers, marginLeft, tableStartY, calculatedCellWidth, cellHeight,
-            borderColor, headerBackgroundColor, borderWidth, fontPair, headerFontColor
+            headers, marginLeft, tableStartY, calculatedCellWidth, headerHeight,
+            borderColor, headerBackgroundColor, borderWidth, fontPair, headerFontColor,
+            actualLineSpacingFactor, actualHeaderAlignment
         )
 
-        tableStartY -= cellHeight
-        currentY -= cellHeight
+        tableStartY -= headerHeight
+        currentY -= headerHeight
 
         // Draw data rows
         rows.forEachIndexed { rowIndex, row ->
+            // Calculate actual row height for this row
+            val actualRowHeight = if (autoHeight) {
+                calculateRowHeight(row, calculatedCellWidth, fontPair, actualLineSpacingFactor)
+            } else {
+                cellHeight
+            }
+
             // Check if we need a new page
-            if (tableStartY - cellHeight < marginBottom) {
+            if (tableStartY - actualRowHeight < marginBottom) {
                 addNewPage()
                 tableStartY = currentY
             }
@@ -180,13 +301,45 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
             }
 
             drawTableRow(
-                row, marginLeft, tableStartY, calculatedCellWidth, cellHeight,
-                borderColor, rowBackgroundColor, borderWidth, fontPair, rowFontColor
+                row, marginLeft, tableStartY, calculatedCellWidth, actualRowHeight,
+                borderColor, rowBackgroundColor, borderWidth, fontPair, rowFontColor,
+                actualLineSpacingFactor, actualCellAlignment
             )
 
-            tableStartY -= cellHeight
-            currentY -= cellHeight
+            tableStartY -= actualRowHeight
+            currentY -= actualRowHeight
         }
+    }
+
+    /**
+     * Calculates the required height for a row based on the maximum number of wrapped text lines
+     * in any cell of that row.
+     *
+     * @param cells List of cell values in the row
+     * @param cellWidth Width of each cell (used for wrapping calculation)
+     * @param fontPair Font pair used for text measurement
+     * @param lineSpacingFactor Line spacing multiplier for text
+     * @return The minimum height needed to display all cell content
+     */
+    private fun calculateRowHeight(
+        cells: List<String>,
+        cellWidth: Float,
+        fontPair: FontPair,
+        lineSpacingFactor: Float = defaultTableLineSpacingFactor
+    ): Float {
+        val maxCellWidth = cellWidth - (defaultTableCellPaddingHorizontal * 2)
+        var maxLines = 1
+
+        cells.forEach { cellText ->
+            val wrappedLines = wrapText(cellText, fontPair.pdFont, defaultFontSize, maxCellWidth)
+            if (wrappedLines.size > maxLines) {
+                maxLines = wrappedLines.size
+            }
+        }
+
+        val lineHeight = defaultFontSize * lineSpacingFactor
+        val verticalPadding = defaultTableCellPaddingVertical * 2
+        return (maxLines * lineHeight) + verticalPadding
     }
 
     /**
@@ -202,6 +355,8 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
      * @param borderWidth Width of the border line
      * @param fontPair The font pair to use for rendering text
      * @param fontColor RGB color for the text
+     * @param lineSpacingFactor Line spacing multiplier for wrapped text
+     * @param cellAlignment Text alignment within cells (LEFT, CENTER, or RIGHT)
      */
     private fun drawTableRow(
         cells: List<String>,
@@ -213,7 +368,9 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
         backgroundColor: Triple<Float, Float, Float>?,
         borderWidth: Float,
         fontPair: FontPair,
-        fontColor: Triple<Float, Float, Float> = Triple(0f, 0f, 0f)
+        fontColor: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
+        lineSpacingFactor: Float = defaultTableLineSpacingFactor,
+        cellAlignment: CellAlignment = CellAlignment()
     ) {
         cells.forEachIndexed { index, cellText ->
             val cellX = startX + (index * cellWidth)
@@ -237,9 +394,46 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
 
             // Set font color and draw text
             cs.setNonStrokingColor(fontColor.first, fontColor.second, fontColor.third)
-            val textX = cellX + 5f // 5 points padding
-            val textY = startY - (cellHeight / 2) - (defaultFontSize / 4) // Vertically center
-            renderText(cellText, textX, textY, fontPair, defaultFontSize)
+
+            // Wrap text to fit within cell width (accounting for padding)
+            val maxCellWidth = cellWidth - (defaultTableCellPaddingHorizontal * 2)
+            val wrappedLines = wrapText(cellText, fontPair.pdFont, defaultFontSize, maxCellWidth)
+
+            // Draw wrapped text lines
+            val lineHeight = defaultFontSize * lineSpacingFactor
+            val totalLinesHeight = wrappedLines.size * lineHeight
+
+            // Calculate starting Y position based on vertical alignment
+            val startTextY = when (cellAlignment.vertical) {
+                VerticalAlignment.TOP -> startY - defaultTableCellPaddingVertical - defaultFontSize
+                VerticalAlignment.MIDDLE -> {
+                    val availableHeight = cellHeight - (defaultTableCellPaddingVertical * 2)
+                    val verticalOffset = (availableHeight - totalLinesHeight) / 2
+                    startY - defaultTableCellPaddingVertical - verticalOffset - defaultFontSize
+                }
+                VerticalAlignment.BOTTOM -> {
+                    val bottomPadding = defaultTableCellPaddingVertical
+                    startY - cellHeight + bottomPadding + (totalLinesHeight - lineHeight)
+                }
+            }
+
+            wrappedLines.forEachIndexed { lineIndex, line ->
+                // Calculate X position based on horizontal alignment
+                val textX = when (cellAlignment.horizontal) {
+                    HorizontalAlignment.LEFT -> cellX + defaultTableCellPaddingHorizontal
+                    HorizontalAlignment.CENTER -> {
+                        val lineWidth = fontPair.pdFont.getStringWidth(line) / 1000 * defaultFontSize
+                        cellX + (cellWidth - lineWidth) / 2
+                    }
+                    HorizontalAlignment.RIGHT -> {
+                        val lineWidth = fontPair.pdFont.getStringWidth(line) / 1000 * defaultFontSize
+                        cellX + cellWidth - lineWidth - defaultTableCellPaddingHorizontal
+                    }
+                }
+
+                val textY = startTextY - (lineIndex * lineHeight)
+                renderText(line, textX, textY, fontPair, defaultFontSize)
+            }
         }
     }
 
@@ -420,7 +614,7 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
      * @param fontSize the size of the font to be used
      */
     private fun renderTextNative(
-        text: String, x: Float, y: Float, pdFont: PDFont, fontSize: Float
+        text: String, x: Float, y: Float, pdFont: PDFont, fontSize: Float,
     ) {
         val cs = contentStream ?: return
         cs.beginText()
