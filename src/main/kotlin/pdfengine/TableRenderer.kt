@@ -147,7 +147,7 @@ class TableRenderer(
         startY: Float,
         columnWidths: List<Float>,
         cellHeight: Float,
-        borderColor: PdfColor,
+        borderColor: PdfColor?,
         backgroundColor: PdfColor?,
         borderWidth: Float,
         fontPair: PdfFont,
@@ -171,10 +171,12 @@ class TableRenderer(
             }
 
             // 2. Draw border
-            contentStream.setStrokingColor(borderColor.r, borderColor.g, borderColor.b)
-            contentStream.setLineWidth(borderWidth)
-            contentStream.addRect(currentX, startY - cellHeight, cellWidth, cellHeight)
-            contentStream.stroke()
+            if (borderColor != null){
+                contentStream.setStrokingColor(borderColor.r, borderColor.g, borderColor.b)
+                contentStream.setLineWidth(borderWidth)
+                contentStream.addRect(currentX, startY - cellHeight, cellWidth, cellHeight)
+                contentStream.stroke()
+            }
 
             // 3. Draw text
             val maxCellWidth = cellWidth - (horizontalPadding * 2)

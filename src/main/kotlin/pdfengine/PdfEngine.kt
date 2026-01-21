@@ -22,7 +22,6 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
     private var currentPage: PDPage? = null
     private var contentStream: PDPageContentStream? = null
     var currentY = mediaBox.height - pageConfig.marginTop
-        private set
 
     private var defaultFontPair: PdfFont? = null
 
@@ -222,7 +221,8 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
         borderWidth: Float? = null,
         lineSpacingFactor: Float? = null,
         headerAlignment: CellAlignment? = null,
-        cellAlignment: CellAlignment? = null
+        cellAlignment: CellAlignment? = null,
+        x: Float? = null
     ) {
         val currentTableConfig = tableConfig.copy(
             cellHeight = cellHeight ?: tableConfig.cellHeight,
@@ -236,7 +236,8 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
             lineSpacingFactor = lineSpacingFactor ?: tableConfig.lineSpacingFactor,
             headerAlignment = headerAlignment ?: tableConfig.headerAlignment,
             cellAlignment = cellAlignment ?: tableConfig.cellAlignment,
-            columnWidths = columnWidths ?: tableConfig.columnWidths
+            columnWidths = columnWidths ?: tableConfig.columnWidths,
+            startX = x ?: tableConfig.startX
         )
 
         val table = PdfTable(headers, rows, currentTableConfig)
@@ -248,7 +249,7 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
         val cs = contentStream ?: return
 
         currentY = tableRenderer.drawTable(
-            cs, pageConfig.marginLeft, currentY, availableWidth,
+            cs, pageConfig.marginLeft + (table.config.startX ?: 0f), currentY, availableWidth,
             table, fontPair, pageConfig.defaultFontSize
         ) { rowHeight ->
             addNewPage()
@@ -261,6 +262,66 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
         builder.block()
         val table = builder.build()
         drawTable(table)
+    }
+
+    /**
+     * Draws a single row using the provided data and optional configuration overrides.
+     */
+    fun drawRow(
+        cells: List<String>,
+        tableConfig: TableConfig = TableConfig(),
+        columnWidths: List<Float>? = null,
+        cellHeight: Float? = null,
+        autoHeight: Boolean? = null,
+        borderColor: PdfColor? = null,
+        backgroundColor: PdfColor? = null,
+        fontColor: PdfColor? = null,
+        borderWidth: Float? = null,
+        lineSpacingFactor: Float? = null,
+        cellAlignment: CellAlignment? = null,
+        x: Float? = null,
+        newLine: Boolean = true
+    ) {
+        val currentTableConfig = tableConfig.copy(
+            cellHeight = cellHeight ?: tableConfig.cellHeight,
+            autoHeight = autoHeight ?: tableConfig.autoHeight,
+            borderColor = borderColor ?: tableConfig.borderColor,
+            rowFontColor = fontColor ?: tableConfig.rowFontColor,
+            borderWidth = borderWidth ?: tableConfig.borderWidth,
+            lineSpacingFactor = lineSpacingFactor ?: tableConfig.lineSpacingFactor,
+            cellAlignment = cellAlignment ?: tableConfig.cellAlignment,
+            columnWidths = columnWidths ?: tableConfig.columnWidths,
+            startX = x ?: tableConfig.startX
+        )
+
+        val fontPair = this.getFontPair()
+        val cs = contentStream ?: return
+        val fontSize = pageConfig.defaultFontSize
+        val startX = pageConfig.marginLeft + (currentTableConfig.startX ?: 0f)
+        
+        
+        val actualColumnWidths = currentTableConfig.columnWidths 
+            ?: List(cells.size) { availableWidth / cells.size }
+
+        val actualRowHeight = if (currentTableConfig.autoHeight) {
+            tableRenderer.calculateRowHeight(cells, actualColumnWidths, fontPair, fontSize, currentTableConfig)
+        } else {
+            currentTableConfig.cellHeight
+        }
+
+        // Check for new page
+        if (currentY - actualRowHeight < pageConfig.marginBottom) {
+            addNewPage()
+        }
+        tableRenderer.drawTableRow(
+            contentStream!!, cells, startX, currentY,
+            actualColumnWidths, actualRowHeight,
+            currentTableConfig.borderColor, backgroundColor, currentTableConfig.borderWidth, fontPair, fontSize,
+            currentTableConfig.rowFontColor, currentTableConfig.lineSpacingFactor, currentTableConfig.cellAlignment, 
+            currentTableConfig.horizontalPadding, currentTableConfig.verticalPadding
+        )
+        if (newLine)
+            currentY -= actualRowHeight
     }
 
     fun save(fileName: String) {

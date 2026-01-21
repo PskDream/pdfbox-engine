@@ -26,7 +26,7 @@ data class PdfColor(val r: Float, val g: Float, val b: Float) {
 data class TableConfig(
     var cellHeight: Float = 30f,
     var autoHeight: Boolean = true,
-    var borderColor: PdfColor = PdfColor.BLACK,
+    var borderColor: PdfColor? = null,
     var headerBackgroundColor: PdfColor = PdfColor.LIGHT_GRAY,
     var headerFontColor: PdfColor = PdfColor.WHITE,
     var rowFontColor: PdfColor = PdfColor.BLACK,
@@ -36,6 +36,7 @@ data class TableConfig(
     var horizontalPadding: Float = 5f,
     var verticalPadding: Float = 5f,
     var columnWidths: List<Float>? = null,
+    var startX: Float? = null,
     var headerAlignment: CellAlignment = CellAlignment(HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE),
     var cellAlignment: CellAlignment = CellAlignment(HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE)
 ) {
@@ -51,6 +52,7 @@ data class TableConfig(
     fun horizontalPadding(value: Float): TableConfig { horizontalPadding = value; return this }
     fun verticalPadding(value: Float): TableConfig { verticalPadding = value; return this }
     fun columnWidths(value: List<Float>?): TableConfig { columnWidths = value; return this }
+    fun startX(value: Float?): TableConfig { startX = value; return this }
     fun headerAlignment(horizontal: HorizontalAlignment = HorizontalAlignment.CENTER, vertical: VerticalAlignment = VerticalAlignment.MIDDLE): TableConfig {
         headerAlignment = CellAlignment(horizontal, vertical)
         return this
