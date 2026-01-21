@@ -68,18 +68,18 @@ class TableRenderer(
         val numColumns = table.headers.size
         if (numColumns == 0) return currentY
         
-        val cellWidth = availableWidth / numColumns
+        val columnWidths = config.columnWidths ?: List(numColumns) { availableWidth / numColumns }
 
         // Calculate header height
         val headerHeight = if (config.autoHeight) {
-            calculateRowHeight(table.headers, cellWidth, fontPair, fontSize, config)
+            calculateRowHeight(table.headers, columnWidths, fontPair, fontSize, config)
         } else {
             config.cellHeight
         }
 
         // Draw header row
         drawTableRow(
-            currentContentStream, table.headers, startX, currentY, cellWidth, headerHeight,
+            currentContentStream, table.headers, startX, currentY, columnWidths, headerHeight,
             config.borderColor, config.headerBackgroundColor, config.borderWidth, fontPair, fontSize,
             config.headerFontColor, config.lineSpacingFactor, config.headerAlignment, config.horizontalPadding, config.verticalPadding
         )
@@ -89,7 +89,7 @@ class TableRenderer(
         // Draw data rows
         table.rows.forEachIndexed { rowIndex, row ->
             val actualRowHeight = if (config.autoHeight) {
-                calculateRowHeight(row, cellWidth, fontPair, fontSize, config)
+                calculateRowHeight(row, columnWidths, fontPair, fontSize, config)
             } else {
                 config.cellHeight
             }
@@ -107,7 +107,7 @@ class TableRenderer(
             }
 
             drawTableRow(
-                currentContentStream, row, startX, currentY, cellWidth, actualRowHeight,
+                currentContentStream, row, startX, currentY, columnWidths, actualRowHeight,
                 config.borderColor, rowBackgroundColor, config.borderWidth, fontPair, fontSize,
                 config.rowFontColor, config.lineSpacingFactor, config.cellAlignment, config.horizontalPadding, config.verticalPadding
             )
@@ -120,17 +120,20 @@ class TableRenderer(
 
     fun calculateRowHeight(
         cells: List<String>,
-        cellWidth: Float,
+        columnWidths: List<Float>,
         fontPair: PdfFont,
         fontSize: Float,
         config: TableConfig
     ): Float {
-        val maxCellWidth = cellWidth - (config.horizontalPadding * 2)
         var maxLines = 1
 
-        cells.forEach { cellText ->
-            val lines = textWrapper.wrapText(cellText, fontPair.pdFont, fontSize, maxCellWidth)
-            maxLines = max(maxLines, lines.size)
+        cells.forEachIndexed { index, cellText ->
+            val cellWidth = columnWidths.getOrElse(index) { 0f }
+            val maxCellWidth = cellWidth - (config.horizontalPadding * 2)
+            if (maxCellWidth > 0) {
+                val lines = textWrapper.wrapText(cellText, fontPair.pdFont, fontSize, maxCellWidth)
+                maxLines = max(maxLines, lines.size)
+            }
         }
 
         val lineHeight = fontSize * config.lineSpacingFactor
@@ -142,7 +145,7 @@ class TableRenderer(
         cells: List<String>,
         startX: Float,
         startY: Float,
-        cellWidth: Float,
+        columnWidths: List<Float>,
         cellHeight: Float,
         borderColor: PdfColor,
         backgroundColor: PdfColor?,
@@ -157,7 +160,9 @@ class TableRenderer(
     ) {
         var currentX = startX
 
-        cells.forEach { cellText ->
+        cells.forEachIndexed { index, cellText ->
+            val cellWidth = columnWidths.getOrElse(index) { 0f }
+            
             // 1. Draw background
             if (backgroundColor != null) {
                 contentStream.setNonStrokingColor(backgroundColor.r, backgroundColor.g, backgroundColor.b)
@@ -173,27 +178,29 @@ class TableRenderer(
 
             // 3. Draw text
             val maxCellWidth = cellWidth - (horizontalPadding * 2)
-            val lines = textWrapper.wrapText(cellText, fontPair.pdFont, fontSize, maxCellWidth)
-            val totalTextHeight = lines.size * (fontSize * lineSpacingFactor)
+            if (maxCellWidth > 0) {
+                val lines = textWrapper.wrapText(cellText, fontPair.pdFont, fontSize, maxCellWidth)
+                val totalTextHeight = lines.size * (fontSize * lineSpacingFactor)
 
-            // Calculate starting Y for vertical alignment
-            val startTextY = when (cellAlignment.vertical) {
-                VerticalAlignment.TOP -> startY - verticalPadding - fontSize
-                VerticalAlignment.MIDDLE -> startY - (cellHeight - totalTextHeight) / 2 - fontSize
-                VerticalAlignment.BOTTOM -> startY - cellHeight + verticalPadding + (totalTextHeight - (fontSize * lineSpacingFactor))
-            }
-
-            lines.forEachIndexed { index, line ->
-                val lineWidth = fontPair.pdFont.getStringWidth(line) / 1000 * fontSize
-                val lineX = when (cellAlignment.horizontal) {
-                    HorizontalAlignment.LEFT -> currentX + horizontalPadding
-                    HorizontalAlignment.CENTER -> currentX + (cellWidth - lineWidth) / 2
-                    HorizontalAlignment.RIGHT -> currentX + cellWidth - horizontalPadding - lineWidth
+                // Calculate starting Y for vertical alignment
+                val startTextY = when (cellAlignment.vertical) {
+                    VerticalAlignment.TOP -> startY - verticalPadding - fontSize
+                    VerticalAlignment.MIDDLE -> startY - (cellHeight - totalTextHeight) / 2 - fontSize
+                    VerticalAlignment.BOTTOM -> startY - cellHeight + verticalPadding + (totalTextHeight - (fontSize * lineSpacingFactor))
                 }
-                val lineY = startTextY - (index * fontSize * lineSpacingFactor)
 
-                contentStream.setNonStrokingColor(fontColor.r, fontColor.g, fontColor.b)
-                textRenderer.drawText(contentStream, line, lineX, lineY, fontPair, fontSize)
+                lines.forEachIndexed { lineIndex, line ->
+                    val lineWidth = fontPair.pdFont.getStringWidth(line) / 1000 * fontSize
+                    val lineX = when (cellAlignment.horizontal) {
+                        HorizontalAlignment.LEFT -> currentX + horizontalPadding
+                        HorizontalAlignment.CENTER -> currentX + (cellWidth - lineWidth) / 2
+                        HorizontalAlignment.RIGHT -> currentX + cellWidth - horizontalPadding - lineWidth
+                    }
+                    val lineY = startTextY - (lineIndex * fontSize * lineSpacingFactor)
+
+                    contentStream.setNonStrokingColor(fontColor.r, fontColor.g, fontColor.b)
+                    textRenderer.drawText(contentStream, line, lineX, lineY, fontPair, fontSize)
+                }
             }
 
             currentX += cellWidth

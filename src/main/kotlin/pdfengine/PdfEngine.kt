@@ -139,7 +139,11 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
     fun newLine(lineHeightFactor: Float? = null) {
         val actualLineHeightFactor = lineHeightFactor ?: pageConfig.defaultLineSpacingFactor
         val lineHeight = pageConfig.defaultFontSize * actualLineHeightFactor
-        currentY -= lineHeight
+        if (currentY - lineHeight < pageConfig.marginBottom) {
+            addNewPage()
+        } else {
+            currentY -= lineHeight
+        }
     }
 
     fun setFont(familyName: String, style: FontStyle = FontStyle.REGULAR) {
@@ -207,7 +211,7 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
         headers: List<String>,
         rows: List<List<String>>,
         tableConfig: TableConfig = TableConfig(),
-        cellWidth: Float? = null,
+        columnWidths: List<Float>? = null,
         cellHeight: Float? = null,
         autoHeight: Boolean? = null,
         borderColor: PdfColor? = null,
@@ -231,7 +235,8 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
             borderWidth = borderWidth ?: tableConfig.borderWidth,
             lineSpacingFactor = lineSpacingFactor ?: tableConfig.lineSpacingFactor,
             headerAlignment = headerAlignment ?: tableConfig.headerAlignment,
-            cellAlignment = cellAlignment ?: tableConfig.cellAlignment
+            cellAlignment = cellAlignment ?: tableConfig.cellAlignment,
+            columnWidths = columnWidths ?: tableConfig.columnWidths
         )
 
         val table = PdfTable(headers, rows, currentTableConfig)

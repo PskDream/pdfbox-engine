@@ -35,6 +35,7 @@ data class TableConfig(
     var lineSpacingFactor: Float = 1.2f,
     var horizontalPadding: Float = 5f,
     var verticalPadding: Float = 5f,
+    var columnWidths: List<Float>? = null,
     var headerAlignment: CellAlignment = CellAlignment(HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE),
     var cellAlignment: CellAlignment = CellAlignment(HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE)
 ) {
@@ -49,6 +50,7 @@ data class TableConfig(
     fun lineSpacingFactor(value: Float): TableConfig { lineSpacingFactor = value; return this }
     fun horizontalPadding(value: Float): TableConfig { horizontalPadding = value; return this }
     fun verticalPadding(value: Float): TableConfig { verticalPadding = value; return this }
+    fun columnWidths(value: List<Float>?): TableConfig { columnWidths = value; return this }
     fun headerAlignment(horizontal: HorizontalAlignment = HorizontalAlignment.CENTER, vertical: VerticalAlignment = VerticalAlignment.MIDDLE): TableConfig {
         headerAlignment = CellAlignment(horizontal, vertical)
         return this
