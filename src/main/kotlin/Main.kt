@@ -331,8 +331,6 @@ fun main() {
             }
 
             engine.save("advanced_pdf_engine_example.pdf")
-
-
         }
     }
 }
