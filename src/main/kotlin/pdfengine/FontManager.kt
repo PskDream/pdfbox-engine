@@ -16,7 +16,7 @@ enum class FontStyle {
 
 // เปลี่ยนชื่อ Class ให้สื่อความหมาย (เก็บได้ทั้ง Type0 และ Type1)
 // เก็บข้อมูลฟอนต์ พร้อมการตั้งค่าว่า "ตัวนี้ต้องจัดสระไหม?"
-data class FontPair(
+data class PdfFont(
     val pdFont: PDFont,
     val awtFont: Font?, // <--- เปลี่ยนเป็น Nullable (มีค่าเฉพาะตอน useShaping = true)
     val useShaping: Boolean
@@ -25,13 +25,13 @@ data class FontPair(
 class FontManager(private val document: PDDocument) {
 
     // เปลี่ยน Value Type เป็น PDFont (Class แม่)
-    private val fontFamilies = mutableMapOf<String, MutableMap<FontStyle, FontPair>>()
+    private val fontFamilies = mutableMapOf<String, MutableMap<FontStyle, PdfFont>>()
 
     /**
      * ลงทะเบียน Custom Font (เช่น Sarabun.ttf) สำหรับภาษาไทย
      * (Logic เดิม)
      */
-    fun registerCustomFont(
+    fun addFont(
         name: String, style: FontStyle, file: File,
         useShaping: Boolean = true // Default = true สำหรับ Custom Font (มักเป็นไทย)
     ) {
@@ -50,7 +50,7 @@ class FontManager(private val document: PDDocument) {
      * ลงทะเบียน Standard Font (เช่น Helvetica) สำหรับภาษาอังกฤษ
      * (Logic ใหม่)
      */
-    fun registerStandardFont(
+    fun addStandardFont(
         name: String, style: FontStyle, stdName: Standard14Fonts.FontName
     ) {
         val pdFont = PDType1Font(stdName)
@@ -59,10 +59,10 @@ class FontManager(private val document: PDDocument) {
     }
 
     private fun storeFont(name: String, style: FontStyle, pdFont: PDFont, awtFont: Font?, useShaping: Boolean) {
-        fontFamilies.computeIfAbsent(name) { mutableMapOf() }[style] = FontPair(pdFont, awtFont, useShaping)
+        fontFamilies.computeIfAbsent(name) { mutableMapOf() }[style] = PdfFont(pdFont, awtFont, useShaping)
     }
 
-    fun getFont(familyName: String, style: FontStyle): FontPair {
+    fun getFont(familyName: String, style: FontStyle): PdfFont {
         val family = fontFamilies[familyName]
             ?: throw IllegalArgumentException("Font Family '$familyName' not registered.")
         return family[style] ?: family[FontStyle.REGULAR]
