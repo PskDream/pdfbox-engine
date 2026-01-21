@@ -97,6 +97,8 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
      *                        If null, uses the default line spacing factor.
      * @param wrapText Whether to wrap the text if it exceeds the specified maximum width. Defaults to false.
      * @param maxWidth The maximum width allowed for the text before wrapping occurs. Defaults to the calculated maximum width of the page.
+     * @param alignment Text alignment (horizontal). If null, text starts at x coordinate (LEFT).
+     *                 Can be set to CENTER or RIGHT to align text within the available width.
      * @throws IllegalStateException If a font has not been set prior to invoking this method.
      */
     fun writeLine(
@@ -104,7 +106,8 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
         x: Float = marginLeft,
         lineHeightFactor: Float? = null,
         wrapText: Boolean = false,
-        maxWidth: Float = getAvailableWidth()
+        maxWidth: Float = getAvailableWidth(),
+        alignment: HorizontalAlignment? = null
     ) {
         val fontPair = this.getFontPair()
         val pdFont = fontPair.pdFont
@@ -117,7 +120,21 @@ class AdvancedPdfEngine(val document: PDDocument, private val mediaBox: PDRectan
             if (currentY - lineHeight < marginBottom) {
                 addNewPage()
             }
-            renderText(line, x, currentY, fontPair, defaultFontSize)
+
+            // Calculate X position based on alignment
+            val textX = when (alignment) {
+                null, HorizontalAlignment.LEFT -> x
+                HorizontalAlignment.CENTER -> {
+                    val lineWidth = pdFont.getStringWidth(line) / 1000 * defaultFontSize
+                    x + (maxWidth - lineWidth) / 2
+                }
+                HorizontalAlignment.RIGHT -> {
+                    val lineWidth = pdFont.getStringWidth(line) / 1000 * defaultFontSize
+                    x + maxWidth - lineWidth
+                }
+            }
+
+            renderText(line, textX, currentY, fontPair, defaultFontSize)
             currentY -= lineHeight
         }
 
