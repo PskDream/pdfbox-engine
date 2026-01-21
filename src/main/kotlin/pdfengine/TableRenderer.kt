@@ -40,8 +40,8 @@ class PdfTableBuilder {
         rows.addAll(allRows)
     }
 
-    fun config(block: TableConfig.() -> TableConfig) {
-        config = config.block()
+    fun config(block: TableConfig.() -> Unit) {
+        config.block()
     }
 
     fun build(): PdfTable = PdfTable(headers, rows, config)

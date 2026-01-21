@@ -18,7 +18,6 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
     val fontManager = FontManager(document)
 
     private var pageConfig = PageConfig()
-    private var tableConfig = TableConfig()
 
     private var currentPage: PDPage? = null
     private var contentStream: PDPageContentStream? = null
@@ -31,12 +30,8 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
         addNewPage()
     }
 
-    fun pageConfig(block: PageConfig.() -> PageConfig) {
-        pageConfig = pageConfig.block()
-    }
-
-    fun tableConfig(block: TableConfig.() -> TableConfig) {
-        tableConfig = tableConfig.block()
+    fun pageConfig(block: PageConfig.() -> Unit) {
+        pageConfig.block()
     }
 
     fun setBreakIterator(locale: Locale) {
@@ -46,9 +41,14 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
     val availableWidth: Float
         get() = mediaBox.width - pageConfig.marginLeft - pageConfig.marginRight
 
-    fun drawText(text: String, x: Float = pageConfig.marginLeft, y: Float = currentY) {
+    fun drawText(text: String, x: Float = pageConfig.marginLeft, y: Float = currentY, color: PdfColor? = null) {
         val cs = contentStream ?: return
+        color?.let { cs.setNonStrokingColor(it.r, it.g, it.b) }
         textRenderer.drawText(cs, text, x, y, this.getFontPair(), pageConfig.defaultFontSize)
+        if (color != null) {
+            // Reset to black (or we could store previous color, but usually it's black)
+            cs.setNonStrokingColor(0f, 0f, 0f)
+        }
     }
 
     /**
@@ -206,28 +206,29 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
     fun drawTable(
         headers: List<String>,
         rows: List<List<String>>,
+        tableConfig: TableConfig = TableConfig(),
         cellWidth: Float? = null,
-        cellHeight: Float = 30f,
-        autoHeight: Boolean = true,
-        borderColor: PdfColor = PdfColor.BLACK,
-        headerBackgroundColor: PdfColor = PdfColor.LIGHT_GRAY,
-        headerFontColor: PdfColor = PdfColor.WHITE,
-        rowFontColor: PdfColor = PdfColor.BLACK,
+        cellHeight: Float? = null,
+        autoHeight: Boolean? = null,
+        borderColor: PdfColor? = null,
+        headerBackgroundColor: PdfColor? = null,
+        headerFontColor: PdfColor? = null,
+        rowFontColor: PdfColor? = null,
         alternateRowColor: PdfColor? = null,
-        borderWidth: Float = 1f,
+        borderWidth: Float? = null,
         lineSpacingFactor: Float? = null,
         headerAlignment: CellAlignment? = null,
         cellAlignment: CellAlignment? = null
     ) {
         val currentTableConfig = tableConfig.copy(
-            cellHeight = cellHeight,
-            autoHeight = autoHeight,
-            borderColor = borderColor,
-            headerBackgroundColor = headerBackgroundColor,
-            headerFontColor = headerFontColor,
-            rowFontColor = rowFontColor,
-            alternateRowColor = alternateRowColor,
-            borderWidth = borderWidth,
+            cellHeight = cellHeight ?: tableConfig.cellHeight,
+            autoHeight = autoHeight ?: tableConfig.autoHeight,
+            borderColor = borderColor ?: tableConfig.borderColor,
+            headerBackgroundColor = headerBackgroundColor ?: tableConfig.headerBackgroundColor,
+            headerFontColor = headerFontColor ?: tableConfig.headerFontColor,
+            rowFontColor = rowFontColor ?: tableConfig.rowFontColor,
+            alternateRowColor = alternateRowColor ?: tableConfig.alternateRowColor,
+            borderWidth = borderWidth ?: tableConfig.borderWidth,
             lineSpacingFactor = lineSpacingFactor ?: tableConfig.lineSpacingFactor,
             headerAlignment = headerAlignment ?: tableConfig.headerAlignment,
             cellAlignment = cellAlignment ?: tableConfig.cellAlignment
@@ -253,7 +254,8 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
     fun drawTable(block: PdfTableBuilder.() -> Unit) {
         val builder = PdfTableBuilder()
         builder.block()
-        drawTable(builder.build())
+        val table = builder.build()
+        drawTable(table)
     }
 
     fun save(fileName: String) {

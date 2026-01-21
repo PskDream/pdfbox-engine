@@ -6,6 +6,7 @@ import pdfengine.FontStyle
 import pdfengine.HorizontalAlignment
 import pdfengine.VerticalAlignment
 import pdfengine.PdfColor
+import pdfengine.TableConfig
 import java.io.File
 import java.util.*
 
@@ -78,6 +79,7 @@ fun main() {
             engine.drawTable(
                 headers = headers,
                 rows = rows,
+                tableConfig = TableConfig(),
                 autoHeight = true,
                 borderColor = PdfColor.BLACK,
                 headerBackgroundColor = PdfColor(0.2f, 0.4f, 0.7f),
@@ -114,6 +116,7 @@ fun main() {
             engine.drawTable(
                 headers = productHeaders,
                 rows = productRows,
+                tableConfig = TableConfig(),
                 autoHeight = true,
                 borderColor = PdfColor(0f, 0.5f, 0f),
                 headerBackgroundColor = PdfColor(0.1f, 0.6f, 0.1f),
@@ -140,6 +143,7 @@ fun main() {
             engine.drawTable(
                 headers = scoreHeaders,
                 rows = scoreRows,
+                tableConfig = TableConfig(),
                 cellHeight = 25f,
                 autoHeight = false,
                 borderColor = PdfColor(0.3f, 0.3f, 0.3f),
@@ -169,6 +173,7 @@ fun main() {
                 headers = thaiHeaders,
                 rows = thaiRows,
                 autoHeight = true,
+                tableConfig = TableConfig(),
                 borderColor = PdfColor(0.8f, 0.4f, 0f),
                 headerBackgroundColor = PdfColor(0.8f, 0.4f, 0f),
                 headerFontColor = PdfColor.WHITE,
@@ -194,6 +199,7 @@ fun main() {
             engine.drawTable(
                 headers = alignmentHeaders,
                 rows = alignmentRows,
+                tableConfig = TableConfig(),
                 autoHeight = true,
                 borderColor = PdfColor(0.2f, 0.2f, 0.2f),
                 headerBackgroundColor = PdfColor(0.3f, 0.3f, 0.3f),
@@ -222,6 +228,7 @@ fun main() {
             engine.drawTable(
                 headers = numberHeaders,
                 rows = numberRows,
+                tableConfig = TableConfig(),
                 autoHeight = true,
                 borderColor = PdfColor(0f, 0.4f, 0.7f),
                 headerBackgroundColor = PdfColor(0f, 0.4f, 0.7f),

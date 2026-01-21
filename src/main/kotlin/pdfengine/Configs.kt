@@ -24,52 +24,56 @@ data class PdfColor(val r: Float, val g: Float, val b: Float) {
  * Configuration for table rendering.
  */
 data class TableConfig(
-    val cellHeight: Float = 30f,
-    val autoHeight: Boolean = true,
-    val borderColor: PdfColor = PdfColor.BLACK,
-    val headerBackgroundColor: PdfColor = PdfColor.LIGHT_GRAY,
-    val headerFontColor: PdfColor = PdfColor.WHITE,
-    val rowFontColor: PdfColor = PdfColor.BLACK,
-    val alternateRowColor: PdfColor? = null,
-    val borderWidth: Float = 1f,
-    val lineSpacingFactor: Float = 1.2f,
-    val horizontalPadding: Float = 5f,
-    val verticalPadding: Float = 5f,
-    val headerAlignment: CellAlignment = CellAlignment(HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE),
-    val cellAlignment: CellAlignment = CellAlignment(HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE)
+    var cellHeight: Float = 30f,
+    var autoHeight: Boolean = true,
+    var borderColor: PdfColor = PdfColor.BLACK,
+    var headerBackgroundColor: PdfColor = PdfColor.LIGHT_GRAY,
+    var headerFontColor: PdfColor = PdfColor.WHITE,
+    var rowFontColor: PdfColor = PdfColor.BLACK,
+    var alternateRowColor: PdfColor? = null,
+    var borderWidth: Float = 1f,
+    var lineSpacingFactor: Float = 1.2f,
+    var horizontalPadding: Float = 5f,
+    var verticalPadding: Float = 5f,
+    var headerAlignment: CellAlignment = CellAlignment(HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE),
+    var cellAlignment: CellAlignment = CellAlignment(HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE)
 ) {
-    fun cellHeight(value: Float) = copy(cellHeight = value)
-    fun autoHeight(value: Boolean) = copy(autoHeight = value)
-    fun borderColor(value: PdfColor) = copy(borderColor = value)
-    fun headerBackgroundColor(value: PdfColor) = copy(headerBackgroundColor = value)
-    fun headerFontColor(value: PdfColor) = copy(headerFontColor = value)
-    fun rowFontColor(value: PdfColor) = copy(rowFontColor = value)
-    fun alternateRowColor(value: PdfColor?) = copy(alternateRowColor = value)
-    fun borderWidth(value: Float) = copy(borderWidth = value)
-    fun lineSpacingFactor(value: Float) = copy(lineSpacingFactor = value)
-    fun horizontalPadding(value: Float) = copy(horizontalPadding = value)
-    fun verticalPadding(value: Float) = copy(verticalPadding = value)
-    fun headerAlignment(horizontal: HorizontalAlignment = HorizontalAlignment.CENTER, vertical: VerticalAlignment = VerticalAlignment.MIDDLE) = 
-        copy(headerAlignment = CellAlignment(horizontal, vertical))
-    fun cellAlignment(horizontal: HorizontalAlignment = HorizontalAlignment.LEFT, vertical: VerticalAlignment = VerticalAlignment.MIDDLE) = 
-        copy(cellAlignment = CellAlignment(horizontal, vertical))
+    fun cellHeight(value: Float): TableConfig { cellHeight = value; return this }
+    fun autoHeight(value: Boolean): TableConfig { autoHeight = value; return this }
+    fun borderColor(value: PdfColor): TableConfig { borderColor = value; return this }
+    fun headerBackgroundColor(value: PdfColor): TableConfig { headerBackgroundColor = value; return this }
+    fun headerFontColor(value: PdfColor): TableConfig { headerFontColor = value; return this }
+    fun rowFontColor(value: PdfColor): TableConfig { rowFontColor = value; return this }
+    fun alternateRowColor(value: PdfColor?): TableConfig { alternateRowColor = value; return this }
+    fun borderWidth(value: Float): TableConfig { borderWidth = value; return this }
+    fun lineSpacingFactor(value: Float): TableConfig { lineSpacingFactor = value; return this }
+    fun horizontalPadding(value: Float): TableConfig { horizontalPadding = value; return this }
+    fun verticalPadding(value: Float): TableConfig { verticalPadding = value; return this }
+    fun headerAlignment(horizontal: HorizontalAlignment = HorizontalAlignment.CENTER, vertical: VerticalAlignment = VerticalAlignment.MIDDLE): TableConfig {
+        headerAlignment = CellAlignment(horizontal, vertical)
+        return this
+    }
+    fun cellAlignment(horizontal: HorizontalAlignment = HorizontalAlignment.LEFT, vertical: VerticalAlignment = VerticalAlignment.MIDDLE): TableConfig {
+        cellAlignment = CellAlignment(horizontal, vertical)
+        return this
+    }
 }
 
 /**
  * Configuration for page layout.
  */
 data class PageConfig(
-    val marginTop: Float = 50f,
-    val marginBottom: Float = 50f,
-    val marginLeft: Float = 50f,
-    val marginRight: Float = 50f,
-    val defaultFontSize: Float = 14f,
-    val defaultLineSpacingFactor: Float = 1.2f
+    var marginTop: Float = 50f,
+    var marginBottom: Float = 50f,
+    var marginLeft: Float = 50f,
+    var marginRight: Float = 50f,
+    var defaultFontSize: Float = 14f,
+    var defaultLineSpacingFactor: Float = 1.2f
 ) {
-    fun marginTop(value: Float) = copy(marginTop = value)
-    fun marginBottom(value: Float) = copy(marginBottom = value)
-    fun marginLeft(value: Float) = copy(marginLeft = value)
-    fun marginRight(value: Float) = copy(marginRight = value)
-    fun defaultFontSize(value: Float) = copy(defaultFontSize = value)
-    fun defaultLineSpacingFactor(value: Float) = copy(defaultLineSpacingFactor = value)
+    fun marginTop(value: Float): PageConfig { marginTop = value; return this }
+    fun marginBottom(value: Float): PageConfig { marginBottom = value; return this }
+    fun marginLeft(value: Float): PageConfig { marginLeft = value; return this }
+    fun marginRight(value: Float): PageConfig { marginRight = value; return this }
+    fun defaultFontSize(value: Float): PageConfig { defaultFontSize = value; return this }
+    fun defaultLineSpacingFactor(value: Float): PageConfig { defaultLineSpacingFactor = value; return this }
 }
