@@ -4,6 +4,8 @@ import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDPageContentStream
 import org.apache.pdfbox.pdmodel.common.PDRectangle
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
+import java.io.File
 import java.util.Locale
 
 class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PDRectangle.A4) : AutoCloseable {
@@ -11,6 +13,7 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
     private val textRenderer = TextRenderer()
     private val textWrapper = TextWrapper()
     private val tableRenderer by lazy { TableRenderer(textRenderer, textWrapper) }
+    private val imageRenderer by lazy { ImageRenderer(document) }
 
     val fontManager = FontManager(document)
 
@@ -19,7 +22,8 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
 
     private var currentPage: PDPage? = null
     private var contentStream: PDPageContentStream? = null
-    private var currentY = mediaBox.height - pageConfig.marginTop
+    var currentY = mediaBox.height - pageConfig.marginTop
+        private set
 
     private var defaultFontPair: PdfFont? = null
 
@@ -42,9 +46,53 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
     val availableWidth: Float
         get() = mediaBox.width - pageConfig.marginLeft - pageConfig.marginRight
 
-    fun drawText(text: String, x: Float = pageConfig.marginLeft) {
+    fun drawText(text: String, x: Float = pageConfig.marginLeft, y: Float = currentY) {
         val cs = contentStream ?: return
-        textRenderer.drawText(cs, text, x, currentY, this.getFontPair(), pageConfig.defaultFontSize)
+        textRenderer.drawText(cs, text, x, y, this.getFontPair(), pageConfig.defaultFontSize)
+    }
+
+    /**
+     * Draws text aligned vertically within a given height (e.g., next to an image).
+     * Supports multi-line text wrapping if wrapText is true.
+     */
+    fun drawTextInHeight(
+        text: String,
+        height: Float,
+        x: Float = pageConfig.marginLeft,
+        y: Float = currentY,
+        spacing: Float = pageConfig.defaultLineSpacingFactor,
+        verticalAlignment: VerticalAlignment = VerticalAlignment.MIDDLE,
+        wrapText: Boolean = false,
+        width: Float = availableWidth
+    ) {
+        val fontPair = this.getFontPair()
+        val pdFont = fontPair.pdFont
+        val fontSize = pageConfig.defaultFontSize
+        val lineHeight = fontSize * spacing
+
+        val lines = if (wrapText) {
+            textWrapper.wrapText(text, pdFont, fontSize, width)
+        } else {
+            listOf(text)
+        }
+
+        val totalTextHeight = if (lines.size > 1) {
+            (lines.size - 1) * lineHeight + fontSize
+        } else {
+            fontSize
+        }
+
+        var startY = when (verticalAlignment) {
+            VerticalAlignment.TOP -> y - (fontSize * 0.8f)
+            VerticalAlignment.MIDDLE -> y - (height / 2) + (totalTextHeight / 2) - (fontSize * 0.8f)
+            VerticalAlignment.BOTTOM -> y - height + totalTextHeight - (fontSize * 0.2f)
+        }
+
+        val cs = contentStream ?: return
+        lines.forEach { line ->
+            textRenderer.drawText(cs, line, x, startY, fontPair, fontSize)
+            startY -= lineHeight
+        }
     }
 
     fun drawTextLine(
@@ -60,7 +108,8 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
         val actualLineHeightFactor = lineHeightFactor ?: pageConfig.defaultLineSpacingFactor
         val lineHeight = pageConfig.defaultFontSize * actualLineHeightFactor
 
-        val lines = if (wrapText) textWrapper.wrapText(text, pdFont, pageConfig.defaultFontSize, maxWidth) else listOf(text)
+        val lines =
+            if (wrapText) textWrapper.wrapText(text, pdFont, pageConfig.defaultFontSize, maxWidth) else listOf(text)
 
         lines.forEach { line ->
             if (currentY - lineHeight < pageConfig.marginBottom) {
@@ -74,6 +123,7 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
                     val lineWidth = pdFont.getStringWidth(line) / 1000 * pageConfig.defaultFontSize
                     x + (maxWidth - lineWidth) / 2
                 }
+
                 HorizontalAlignment.RIGHT -> {
                     val lineWidth = pdFont.getStringWidth(line) / 1000 * pageConfig.defaultFontSize
                     x + maxWidth - lineWidth
@@ -101,6 +151,53 @@ class PdfEngine(val document: PDDocument, private val mediaBox: PDRectangle = PD
      */
     fun setFontSize(size: Float) {
         pageConfig = pageConfig.copy(defaultFontSize = size)
+    }
+
+    /**
+     * Draws an image at the current Y position.
+     * Updates currentY based on the image height and spacing.
+     */
+    fun drawImage(
+        file: File,
+        width: Float? = null,
+        height: Float? = null,
+        x: Float = pageConfig.marginLeft,
+        spacing: Float = 10f,
+        updateY: Boolean = true
+    ): Pair<Float, Float> {
+        val cs = contentStream ?: return Pair(0f, 0f)
+
+        // If height is not provided, we need to calculate it to update currentY correctly
+        val finalWidth: Float
+        val finalHeight: Float
+
+        if (width != null && height == null) {
+            // Scale height based on width
+            val pdImage = PDImageXObject.createFromFile(file.absolutePath, document)
+            val aspectRatio = pdImage.height.toFloat() / pdImage.width.toFloat()
+            finalWidth = width
+            finalHeight = width * aspectRatio
+        } else if (width == null && height == null) {
+            val pdImage = PDImageXObject.createFromFile(file.absolutePath, document)
+            finalWidth = pdImage.width.toFloat()
+            finalHeight = pdImage.height.toFloat()
+        } else {
+            finalWidth = width ?: 0f // Should not happen with current logic but for safety
+            finalHeight = height ?: 0f
+        }
+
+        // Check for new page
+        if (currentY - finalHeight < pageConfig.marginBottom) {
+            addNewPage()
+        }
+
+        imageRenderer.drawImage(cs, file, x, currentY - finalHeight, finalWidth, finalHeight)
+
+        if (updateY) {
+            currentY -= (finalHeight + spacing)
+        }
+        
+        return Pair(finalWidth, finalHeight)
     }
 
     /**

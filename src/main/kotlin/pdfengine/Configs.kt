@@ -64,7 +64,7 @@ data class PageConfig(
     val marginLeft: Float = 50f,
     val marginRight: Float = 50f,
     val defaultFontSize: Float = 14f,
-    val defaultLineSpacingFactor: Float = 1.5f
+    val defaultLineSpacingFactor: Float = 1.2f
 ) {
     fun marginTop(value: Float) = copy(marginTop = value)
     fun marginBottom(value: Float) = copy(marginBottom = value)

@@ -15,7 +15,7 @@ fun main() {
     doc.use {
         PdfEngine(it).use { engine ->
             engine.setBreakIterator(Locale.forLanguageTag("th-TH"))
-            engine.pageConfig { defaultLineSpacingFactor(2f) }
+            engine.pageConfig { defaultLineSpacingFactor(1.5f) }
 
             engine.fontManager.addStandardFont("Helvetica", FontStyle.REGULAR, Standard14Fonts.FontName.HELVETICA)
             engine.fontManager.addStandardFont(
@@ -33,8 +33,10 @@ fun main() {
 
             engine.setFont("Helvetica", FontStyle.BOLD)
 //            engine.setFontSize(24f)
-            engine.drawTextLine("Hello World ",
-                alignment= HorizontalAlignment.CENTER)
+            engine.drawTextLine(
+                "Hello World ",
+                alignment = HorizontalAlignment.CENTER
+            )
 //            engine.setFontSize(12f)
             engine.setFont("Helvetica", FontStyle.REGULAR)
 //            engine.drawTextLine(
@@ -49,10 +51,10 @@ fun main() {
             engine.setFont("Sarabun", FontStyle.REGULAR)
             engine.drawTextLine(
                 "Lorem Ipsum คือ เนื้อหาจำลองแบบเรียบๆ ที่ใช้กันในธุรกิจงานพิมพ์หรืองานเรียงพิมพ์ มันได้กลายมาเป็นเนื้อหาจำลองมาตรฐานของธุรกิจดังกล่าวมาตั้งแต่ศตวรรษที่ 16 เมื่อเครื่องพิมพ์โนเนมเครื่องหนึ่งนำรางตัวพิมพ์มาสลับสับตำแหน่งตัวอักษรเพื่อทำหนังสือตัวอย่าง Lorem Ipsum อยู่ยงคงกระพันมาไม่ใช่แค่เพียงห้าศตวรรษ แต่อยู่มาจนถึงยุคที่พลิกโฉมเข้าสู่งานเรียงพิมพ์ด้วยวิธีทางอิเล็กทรอนิกส์ และยังคงสภาพเดิมไว้อย่างไม่มีการเปลี่ยนแปลง มันได้รับความนิยมมากขึ้นในยุค ค.ศ. 1960 เมื่อแผ่น Letraset วางจำหน่ายโดยมีข้อความบนนั้นเป็น Lorem Ipsum และล่าสุดกว่านั้น คือเมื่อซอฟท์แวร์การทำสื่อสิ่งพิมพ์ (Desktop Publishing) อย่าง Aldus PageMaker ได้รวมเอา Lorem Ipsum เวอร์ชั่นต่างๆ เข้าไว้ในซอฟท์แวร์ด้วย",
-                wrapText = true, alignment= HorizontalAlignment.CENTER
+                wrapText = true, alignment = HorizontalAlignment.CENTER
             )
             engine.drawText("x1")
-            engine.drawText("x2", x=100f)
+            engine.drawText("x2", x = 100f)
             engine.newLine()
 
             // Configure line spacing and padding
@@ -95,9 +97,17 @@ fun main() {
 
             val productHeaders = listOf("Product", "Description", "Price")
             val productRows = listOf(
-                listOf("Laptop", "High performance laptop with 16GB RAM and SSD storage suitable for development and design work", "$999"),
+                listOf(
+                    "Laptop",
+                    "High performance laptop with 16GB RAM and SSD storage suitable for development and design work",
+                    "$999"
+                ),
                 listOf("Mouse", "Ergonomic wireless mouse with precision tracking", "$25"),
-                listOf("Keyboard", "Mechanical keyboard with RGB backlight and programmable keys for gaming and productivity", "$75"),
+                listOf(
+                    "Keyboard",
+                    "Mechanical keyboard with RGB backlight and programmable keys for gaming and productivity",
+                    "$75"
+                ),
                 listOf("Monitor", "4K Ultra HD monitor with HDR support perfect for professional work", "$299")
             )
 
@@ -231,7 +241,10 @@ fun main() {
 
             val topAlignHeaders = listOf("Title", "Description")
             val topAlignRows = listOf(
-                listOf("Feature A", "This is a long description that wraps to multiple lines and demonstrates top alignment"),
+                listOf(
+                    "Feature A",
+                    "This is a long description that wraps to multiple lines and demonstrates top alignment"
+                ),
                 listOf("Feature B", "Another description for testing vertical alignment"),
                 listOf("Feature C", "Final test row with top vertical alignment")
             )
@@ -281,6 +294,40 @@ fun main() {
                         .headerAlignment(HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE)
                         .cellAlignment(HorizontalAlignment.CENTER, VerticalAlignment.BOTTOM)
                 }
+            }
+
+            // Example 9: Image support
+            engine.addNewPage()
+            engine.setFont("Helvetica", FontStyle.BOLD)
+            engine.drawTextLine("Example 9: Image Support")
+//            engine.newLine(1f)
+
+            // Note: Since I don't have a real image file path, 
+            // I'll assume there might be a placeholder or just document how to use it.
+            // In a real scenario, you would pass a valid File object.
+            val imageFile = File("1084-536x354-grayscale.jpg") // Replace with actual image path
+            if (imageFile.exists()) {
+                // Draw image and text on the same line
+                val imgWidth = 100f
+                val (imageWidth,imageHeight) = engine.drawImage(imageFile, width = imgWidth, updateY = false)
+                // Use the new helper method for easier vertical alignment
+                engine.drawTextInHeight(
+                    "This is a long description that should wrap to multiple lines when using drawTextInHeight with wrapText=true next to an image.",
+                    height = imageHeight,
+                    width = engine.availableWidth - imageWidth,
+                    x = 160f,
+                    verticalAlignment = VerticalAlignment.MIDDLE,
+                    wrapText = true,
+//                    spacing = 1.2f
+                )
+
+                // Move to next line manually since we didn't update Y
+                engine.newLine((imageHeight / 14f) + 1f)
+                engine.drawTextLine("Back to normal block rendering.")
+            } else {
+                engine.setFont("Helvetica", FontStyle.REGULAR)
+                engine.drawTextLine("[Image 'placeholder.png' not found - demonstration of API only]")
+                engine.drawTextLine("Usage: engine.drawImage(File(\"path/to/image.png\"), width = 200f)")
             }
 
             engine.save("advanced_pdf_engine_example.pdf")
